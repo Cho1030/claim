@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>보험 청구 요청 양식</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 40px;
+    }
+
+    .form-box {
+      background: #ffffff;
+      max-width: 420px;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      font-size: 18px;
+    }
+
+    .line {
+      margin-bottom: 14px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    input::placeholder {
+      color: #bbb;
+    }
+
+    .divider {
+      height: 20px;
+    }
+
+    .fixed-text {
+      font-weight: bold;
+      margin: 10px 0;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 20px;
+      padding: 12px;
+      font-size: 15px;
+      background: #2c7be5;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1a68d1;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="form-box">
+    <h2>보험 청구 요청드립니다.</h2>
+
+    <div class="line">
+      <input id="name1" type="text" placeholder="이름">
+    </div>
+
+    <div class="line">
+      <input id="rrn1" type="text" placeholder="주민번호">
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="fixed-text">*피보*</div>
+
+    <div class="line">
+      <input id="name2" type="text" placeholder="이름">
+    </div>
+
+    <div class="line">
+      <input id="rrn2" type="text" placeholder="주민번호">
+    </div>
+
+    <div class="line">
+      <input id="phone" type="text" placeholder="전화번호">
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="line">
+      <input id="bank" type="text" placeholder="은행">
+    </div>
+
+    <div class="line">
+      <input id="account" type="text" placeholder="계좌번호">
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="line">
+      <input id="company" type="text" placeholder="보험사">
+    </div>
+
+    <div class="line">
+      <input id="symptom" type="text" placeholder="증상">
+    </div>
+
+    <button onclick="copyText()">복사</button>
+  </div>
+
+  <script>
+    function copyText() {
+      const text =
+`보험 청구 요청드립니다.
+
+${name1.value}
+${rrn1.value}
+
+*피보*
+${name2.value}
+${rrn2.value}
+${phone.value}
+
+${bank.value}
+${account.value}
+
+${company.value}
+${symptom.value}`;
+
+      navigator.clipboard.writeText(text).then(() => {
+        alert("입력 내용만 복사되었습니다 👍");
+      });
+    }
+  </script>
+
+</body>
+</html>
