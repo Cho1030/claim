@@ -34,6 +34,7 @@
       font-size: 14px;
       border: 1px solid #ccc;
       border-radius: 4px;
+      box-sizing: border-box;
     }
 
     input::placeholder {
@@ -51,7 +52,7 @@
 
     button {
       width: 100%;
-      margin-top: 20px;
+      margin-top: 10px;
       padding: 12px;
       font-size: 15px;
       background: #2c7be5;
@@ -64,12 +65,82 @@
     button:hover {
       background: #1a68d1;
     }
+
+    /* 붙여넣기 영역 */
+    .paste-area {
+      width: 100%;
+      padding: 10px;
+      font-size: 13px;
+      border: 1px dashed #aaa;
+      border-radius: 4px;
+      background: #f9f9f9;
+      color: #555;
+      resize: vertical;
+      min-height: 60px;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    .paste-area:focus {
+      outline: none;
+      border-color: #2c7be5;
+      background: #fff;
+    }
+
+    .paste-label {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 6px;
+    }
+
+    .parse-btn {
+      background: #5a9e6f;
+      margin-top: 6px;
+    }
+
+    .parse-btn:hover {
+      background: #448055;
+    }
+
+    .section-divider {
+      border: none;
+      border-top: 1px dashed #ddd;
+      margin: 20px 0;
+    }
+
+    .parse-result {
+      font-size: 12px;
+      margin-top: 6px;
+      padding: 6px 10px;
+      border-radius: 4px;
+      display: none;
+    }
+
+    .parse-result.success {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+
+    .parse-result.warn {
+      background: #fff8e1;
+      color: #f57f17;
+    }
   </style>
 </head>
 <body>
 
   <div class="form-box">
     <h2>보험 청구 요청드립니다.</h2>
+
+    <!-- 자동 채우기 영역 -->
+    <div class="paste-label">📋 아래에 텍스트를 붙여넣으면 자동으로 채워집니다</div>
+    <div class="line">
+      <textarea id="pasteInput" class="paste-area" placeholder="여기에 텍스트를 붙여넣으세요...&#10;예) 최혜선 9106022627918 010-9038-5655 ... 우리은행 1002357057116"></textarea>
+    </div>
+    <button class="parse-btn" onclick="parseAndFill()">자동 채우기</button>
+    <div id="parseResult" class="parse-result"></div>
+
+    <hr class="section-divider">
 
     <div class="line">
       <input id="name1" type="text" placeholder="이름">
@@ -119,6 +190,91 @@
   </div>
 
   <script>
+    // 붙여넣기 이벤트: textarea에 붙여넣으면 자동 파싱
+    document.getElementById('pasteInput').addEventListener('paste', function() {
+      setTimeout(parseAndFill, 50);
+    });
+
+    function parseAndFill() {
+      const raw = document.getElementById('pasteInput').value.trim();
+      if (!raw) return;
+
+      const found = {};
+      const notFound = [];
+
+      // 1. 전화번호: 010-XXXX-XXXX 또는 010XXXXXXXX
+      const phoneMatch = raw.match(/01[016789][-.\s]?\d{3,4}[-.\s]?\d{4}/);
+      if (phoneMatch) {
+        // 하이픈/점/공백 제거 후 010 XXXX XXXX 형식으로
+        const digits = phoneMatch[0].replace(/[-.\s]/g, '');
+        found.phone = digits.replace(/^(01[016789])(\d{3,4})(\d{4})$/, '$1 $2 $3');
+      } else {
+        notFound.push('전화번호');
+      }
+
+      // 2. 주민번호: 13자리 숫자 (연속) 또는 XXXXXX-XXXXXXX
+      const rrnMatch = raw.match(/\d{6}-?\d{7}/);
+      if (rrnMatch) {
+        found.rrn = rrnMatch[0];
+      } else {
+        notFound.push('주민번호');
+      }
+
+      // 3. 계좌번호: 10~14자리 숫자 덩어리 (주민번호·전화번호 제외)
+      //    이미 찾은 주민번호·전화번호 숫자를 제거한 뒤 탐색
+      let cleaned = raw;
+      if (found.rrn)   cleaned = cleaned.replace(found.rrn.replace('-',''), '').replace(found.rrn, '');
+      if (found.phone) cleaned = cleaned.replace(found.phone.replace(/[-.\s]/g,''), '').replace(found.phone, '');
+
+      const accountMatch = cleaned.match(/\d{10,14}/);
+      if (accountMatch) {
+        found.account = accountMatch[0];
+      } else {
+        notFound.push('계좌번호');
+      }
+
+      // 4. 은행명: 은행 키워드 앞 단어
+      const bankMatch = raw.match(/([가-힣a-zA-Z]+은행|[가-힣a-zA-Z]+뱅크|카카오뱅크?|케이뱅크?|토스뱅크?|우체국|농협|수협|신협|새마을금고|저축은행|카카오|토스|하나|우리|국민|신한|기업|산업|씨티|부산|대구|경남|광주|전북|제주)/);
+      if (bankMatch) {
+        found.bank = bankMatch[0];
+      } else {
+        notFound.push('은행');
+      }
+
+      // 5. 이름: 2~4글자 한글 이름 (첫 번째로 등장하는 것)
+      const nameMatch = raw.match(/^([가-힣]{2,4})\s/);
+      if (nameMatch) {
+        found.name = nameMatch[1];
+      } else {
+        // 전체에서 첫 한글 2~4글자 단어
+        const nameMatch2 = raw.match(/(?<!\S)([가-힣]{2,4})(?!\S)/);
+        if (nameMatch2) found.name = nameMatch2[1];
+        else notFound.push('이름');
+      }
+
+      // 필드 채우기
+      if (found.name)    { document.getElementById('name1').value = found.name; document.getElementById('name2').value = found.name; }
+      if (found.rrn)     { document.getElementById('rrn1').value = found.rrn;   document.getElementById('rrn2').value = found.rrn; }
+      if (found.phone)   document.getElementById('phone').value   = found.phone;
+      if (found.bank)    document.getElementById('bank').value    = found.bank;
+      if (found.account) document.getElementById('account').value = found.account;
+
+      // 결과 메시지
+      const resultEl = document.getElementById('parseResult');
+      const filledKeys = Object.keys(found);
+      const labelMap = { name:'이름', rrn:'주민번호', phone:'전화번호', bank:'은행', account:'계좌번호' };
+      const filledLabels = filledKeys.map(k => labelMap[k]).filter(Boolean);
+
+      if (notFound.length === 0) {
+        resultEl.className = 'parse-result success';
+        resultEl.textContent = '✅ 자동 채우기 완료: ' + filledLabels.join(', ');
+      } else {
+        resultEl.className = 'parse-result warn';
+        resultEl.textContent = '⚠️ 채워진 항목: ' + (filledLabels.join(', ') || '없음') + '  |  미인식: ' + notFound.join(', ');
+      }
+      resultEl.style.display = 'block';
+    }
+
     function copyText() {
       const text =
 `보험 청구 요청드립니다.
@@ -138,11 +294,10 @@ ${company.value}
 ${symptom.value}`;
 
       navigator.clipboard.writeText(text).then(() => {
-        alert("입력 내용만 복사되었습니다 👍");
+        alert("입력 내용이 복사되었습니다 👍");
       });
     }
   </script>
 
 </body>
 </html>
-
